@@ -46,8 +46,8 @@ public class Robot extends IterativeRobot {
      * used for any initialization code.
      */
     public void robotInit() {
-    	//leftDrive.setInverted(true);
-    	//rightDrive.setInverted(true);
+    	leftDrive.setInverted(true);
+    	rightDrive.setInverted(true);
     	
     	intakeMechanism.lowerIntake();
     	
