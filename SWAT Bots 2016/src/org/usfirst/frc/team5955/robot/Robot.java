@@ -5,7 +5,6 @@ import edu.wpi.first.wpilibj.DoubleSolenoid;
 import edu.wpi.first.wpilibj.IterativeRobot;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.Talon;
-import edu.wpi.first.wpilibj.VictorSP;
 import edu.wpi.first.wpilibj.CANTalon.FeedbackDevice;
 import edu.wpi.first.wpilibj.Compressor;
 import edu.wpi.first.wpilibj.CANTalon;
@@ -128,6 +127,16 @@ public class Robot extends IterativeRobot {
         	}
         }
 
+        //Press forward on the POV to shoot
+        if(gunnerStick.getPOV() == 0)
+        {
+        	shooting = true;
+        	holdingMotor.set(0.50);
+        }
+        else {
+        	shooting = false;
+        }
+        
         //Rev up the shooter wheels.
         if(gunnerStick.getRawButton(4))
         {
@@ -158,22 +167,16 @@ public class Robot extends IterativeRobot {
         	
         	if(revUpTimer.get() > 5.5)
         	{
-        		SmartDashboard.putBoolean("Firing", true);
-        		holdingMotor.set(0.45);
+        		SmartDashboard.putBoolean("Firing Speed", true);
         	}
         	else {
-        		SmartDashboard.putBoolean("Firing", false);
+        		SmartDashboard.putBoolean("Firing Speed", false);
         	}
         	
-        	if(revUpTimer.get() > 6.5)
-        	{
-        		highGoalSpeed = false;
-        		lowGoalSpeed = false;
-        	}
         }
         else {
         	//Allow the intake mechanism to run if the shooter is not active.
-              if(gunnerStick.getPOV() == 180){
+              if(gunnerStick.getPOV() == 180 && shooting == false){
                 intakeMechanism.runIntake();
                 shooterMechanism.setShooterPower(-0.40);
                 holdingMotor.set(-0.45);
@@ -181,7 +184,11 @@ public class Robot extends IterativeRobot {
               else {
               	intakeMechanism.stopIntake();
             	shooterMechanism.setShooterPower(0.00);
-        		holdingMotor.set(0.0);
+            	
+            	if(shooting == false)
+            	{
+        		  holdingMotor.set(0.0);
+            	}
               }
             
         	startingRev = true;
