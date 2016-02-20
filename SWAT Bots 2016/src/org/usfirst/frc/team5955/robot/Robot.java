@@ -37,7 +37,7 @@ public class Robot extends IterativeRobot {
 	CANTalon rightShooterWheel = new CANTalon(1);
 	CANTalon leftShooterWheel = new CANTalon(2);
 	Shooter shooterMechanism = new Shooter(leftShooterWheel, rightShooterWheel);
-	boolean startingRev = true, highGoalSpeed = false, lowGoalSpeed = false, shooting = false;
+	boolean startingRev = true, highGoalSpeed = false, lowGoalSpeed = false, shooting = false, wasShooting = false;
 	Timer revUpTimer = new Timer();
 	
     /**
@@ -131,10 +131,16 @@ public class Robot extends IterativeRobot {
         if(gunnerStick.getPOV() == 0)
         {
         	shooting = true;
+        	wasShooting = true;
         	holdingMotor.set(0.50);
         }
         else {
         	shooting = false;
+        	if(wasShooting = true)
+        	{
+        		highGoalSpeed = false;
+        		lowGoalSpeed = false;
+        	}
         }
         
         //Rev up the shooter wheels.
