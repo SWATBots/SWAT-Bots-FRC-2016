@@ -2,13 +2,16 @@
 package org.usfirst.frc.team5015.robot;
 
 import edu.wpi.first.wpilibj.DoubleSolenoid;
+import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.IterativeRobot;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.Talon;
 import edu.wpi.first.wpilibj.CANTalon.FeedbackDevice;
 import edu.wpi.first.wpilibj.Compressor;
 import edu.wpi.first.wpilibj.CANTalon;
+import edu.wpi.first.wpilibj.CameraServer;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.AnalogGyro;
 import edu.wpi.first.wpilibj.smartdashboard.*;
 
 /**
@@ -26,10 +29,13 @@ public class Robot extends IterativeRobot {
 	Talon leftDrive = new Talon(1);
 	Talon rightDrive = new Talon(0);
 	Drive driveTrain = new Drive(leftDrive, rightDrive);
+	AnalogGyro driveGyro = new AnalogGyro(1);
+	Timer autoTimer = new Timer();
 	
 	DoubleSolenoid intakePosition = new DoubleSolenoid(4, 5);
 	Talon intakeMotor = new Talon(3);
 	Talon holdingMotor = new Talon(2);
+	DigitalInput holdingSwitch = new DigitalInput(0);
 	Intake intakeMechanism = new Intake(intakePosition, intakeMotor);
 
 	DoubleSolenoid shooterPosition = new DoubleSolenoid(6, 7);
@@ -37,14 +43,26 @@ public class Robot extends IterativeRobot {
 	CANTalon rightShooterWheel = new CANTalon(1);
 	CANTalon leftShooterWheel = new CANTalon(2);
 	Shooter shooterMechanism = new Shooter(leftShooterWheel, rightShooterWheel);
-	boolean startingRev = true, highGoalSpeed = false, lowGoalSpeed = false, shooting = false, wasShooting = false;
+	boolean startingRev = true, highGoalSpeed = false, lowGoalSpeed = false;
+	boolean shootingSpeed = false, firing = true;
 	Timer revUpTimer = new Timer();
+	
+	CameraServer server;
+	
+	Prioritizer holdingMotorPower = new Prioritizer();
+	Prioritizer shooterMotorPower = new Prioritizer();
+	
+	//Thread camThread;
+	//Camera driveCamera = new Camera();
 	
     /**
      * This function is run when the robot is first started up and should be
      * used for any initialization code.
      */
     public void robotInit() {
+    	driveGyro.calibrate();
+    	driveGyro.reset();
+    	
     	leftDrive.setInverted(true);
     	rightDrive.setInverted(true);
     	
@@ -76,7 +94,13 @@ public class Robot extends IterativeRobot {
         leftShooterWheel.setI(0.000165); 
         leftShooterWheel.setD(1.75);
         
-        
+    	server = CameraServer.getInstance();
+        server.setQuality(50);
+        //the camera name (ex "cam0") can be found through the roborio web interface
+        server.startAutomaticCapture("cam0");
+    	
+    	//camThread = new Thread(driveCamera);
+    	//camThread.start();
     }
     
 	/**
@@ -89,13 +113,21 @@ public class Robot extends IterativeRobot {
 	 * If using the SendableChooser make sure to add them to the chooser code above as well.
 	 */
     public void autonomousInit() {
-    
+    	driveGyro.reset();
+    	autoTimer.reset();
+    	intakeMechanism.raiseIntake();
     }
 
-    /**
-     * This function is called periodically during autonomous
-     */
+
     public void autonomousPeriodic() {
+    	double kp = 0.03;
+    	if(autoTimer.get() < 2)
+    	{
+    		driveTrain.Halo_Drive(-0.67, -kp*driveGyro.getAngle());
+    	}
+    	else {
+    		driveTrain.Halo_Drive(0.0, 0.0);
+    	}
     }
 
     public void teleopInit() {
@@ -107,6 +139,7 @@ public class Robot extends IterativeRobot {
 	public void teleopPeriodic() {
         driveTrain.Halo_Drive(driveStick.getRawAxis(1), driveStick.getRawAxis(2));
         
+        shootingSpeed = false;
         //Raise and lower the intake mechanism.
         if(gunnerStick.getRawButton(5)) {
         	intakeMechanism.raiseIntake();
@@ -127,20 +160,40 @@ public class Robot extends IterativeRobot {
         	}
         }
 
-        //Press forward on the POV to shoot
+        
+        //Press forward on the POV to fire the shooter
         if(gunnerStick.getPOV() == 0)
         {
-        	shooting = true;
-        	wasShooting = true;
-        	holdingMotor.set(0.50);
+        	holdingMotorPower.addPriority(0.50, 3);
+        	firing = true;
         }
         else {
-        	shooting = false;
-        	if(wasShooting = true)
+        	holdingMotorPower.addPriority(0.0, 0);
+        	if(firing == true)
         	{
-        		highGoalSpeed = false;
-        		lowGoalSpeed = false;
+        		this.stopShooter();
+        		firing = false;
         	}
+        }
+
+        
+    	//Allow the intake mechanism to run if the shooter is not active.
+        if(gunnerStick.getPOV() == 180 && holdingSwitch.get() == true){
+          intakeMechanism.runIntake();
+          shooterMotorPower.addPriority(-1.0, 2);
+          holdingMotorPower.addPriority(-0.70, 2);
+        }
+        else {
+        	intakeMechanism.stopIntake();
+        	shooterMotorPower.addPriority(0.00, 0);
+        	holdingMotorPower.addPriority(0.0, 0);
+        }
+        
+        
+      //Press the "back" button to stop the shooter wheels.
+        if(gunnerStick.getRawButton(7))
+        {
+        	this.stopShooter();
         }
         
         //Rev up the shooter wheels.
@@ -154,14 +207,16 @@ public class Robot extends IterativeRobot {
         	lowGoalSpeed = true;
         }
         
+        
         if(lowGoalSpeed || highGoalSpeed)
         {
+        	
         	if(highGoalSpeed)
         	{
-            	shooterMechanism.setShooterPower(1.0);
+            	shooterMotorPower.addPriority(1.0, 3);
         	}
         	else {
-            	shooterMechanism.setShooterPower(0.40);
+            	shooterMotorPower.addPriority(0.75, 3);
         	}
         	
         	if(startingRev == true)
@@ -173,43 +228,44 @@ public class Robot extends IterativeRobot {
         	
         	if(revUpTimer.get() > 5.5)
         	{
-        		SmartDashboard.putBoolean("Firing Speed", true);
+        		shootingSpeed  = true;
         	}
         	else {
-        		SmartDashboard.putBoolean("Firing Speed", false);
         	}
         	
         }
         else {
-        	//Allow the intake mechanism to run if the shooter is not active.
-              if(gunnerStick.getPOV() == 180 && shooting == false){
-                intakeMechanism.runIntake();
-                shooterMechanism.setShooterPower(-0.40);
-                holdingMotor.set(-0.45);
-              }
-              else {
-              	intakeMechanism.stopIntake();
-            	shooterMechanism.setShooterPower(0.00);
-            	
-            	if(shooting == false)
-            	{
-        		  holdingMotor.set(0.0);
-            	}
-              }
-            
         	startingRev = true;
         	revUpTimer.stop();
         	revUpTimer.reset();
-    		SmartDashboard.putBoolean("Firing", false);
         }
-               
+        
+        holdingMotor.set(holdingMotorPower.getHighestPriorityValue());
+        holdingMotorPower.resetPrioritizer();
+        
+        shooterMechanism.setShooterPower(shooterMotorPower.getHighestPriorityValue());
+        shooterMotorPower.resetPrioritizer();
+        
+		SmartDashboard.putBoolean("Firing Speed", shootingSpeed);
     }
     
+	
     /**
      * This function is called periodically during test mode
      */
     public void testPeriodic() {
     
+    }
+    
+    public boolean isBallLoaded()
+    {
+    	return holdingSwitch.get();
+    }
+    
+    public void stopShooter()
+    {
+    	highGoalSpeed = false;
+    	lowGoalSpeed = false;
     }
     
 }
