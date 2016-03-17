@@ -13,6 +13,7 @@ import edu.wpi.first.wpilibj.CameraServer;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.AnalogGyro;
 import edu.wpi.first.wpilibj.smartdashboard.*;
+import edu.wpi.first.wpilibj.VictorSP;
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -33,26 +34,28 @@ public class Robot extends IterativeRobot {
 	Timer autoTimer = new Timer();
 	
 	DoubleSolenoid intakePosition = new DoubleSolenoid(4, 5);
-	Talon intakeMotor = new Talon(3);
-	Talon holdingMotor = new Talon(2);
+	VictorSP intakeMotor = new VictorSP(4);
+	VictorSP holdingMotor = new VictorSP(5);
+	Talon leftOuterIntake = new Talon(2);
+	Talon rightOuterIntake = new Talon(3);
+
 	DigitalInput holdingSwitch = new DigitalInput(0);
-	Intake intakeMechanism = new Intake(intakePosition, intakeMotor);
+	Intake intakeMechanism;
 
 	DoubleSolenoid shooterPosition = new DoubleSolenoid(6, 7);
 
 	CANTalon rightShooterWheel = new CANTalon(1);
 	CANTalon leftShooterWheel = new CANTalon(2);
-	Shooter shooterMechanism = new Shooter(leftShooterWheel, rightShooterWheel);
+	Shooter shooterMechanism = new Shooter(leftShooterWheel, rightShooterWheel, shooterPosition);
 	boolean startingRev = true, highGoalSpeed = false, lowGoalSpeed = false;
-	boolean shootingSpeed = false, firing = true;
+	boolean shootingSpeed = false, wasFiring = true;
 	Timer revUpTimer = new Timer();
 	
-	CameraServer server;
+	//CameraServer server;
 	
 	Prioritizer holdingMotorPower = new Prioritizer();
 	Prioritizer shooterMotorPower = new Prioritizer();
 	
-	//Thread camThread;
 	//Camera driveCamera = new Camera();
 	
     /**
@@ -60,6 +63,9 @@ public class Robot extends IterativeRobot {
      * used for any initialization code.
      */
     public void robotInit() {
+    	leftOuterIntake.setInverted(true);
+    	intakeMotor.setInverted(true);
+    	intakeMechanism = new Intake(intakePosition, intakeMotor, leftOuterIntake, rightOuterIntake);
     	driveGyro.calibrate();
     	driveGyro.reset();
     	
@@ -72,7 +78,6 @@ public class Robot extends IterativeRobot {
     	
         rightShooterWheel.setFeedbackDevice(FeedbackDevice.CtreMagEncoder_Relative);
         rightShooterWheel.enableBrakeMode(false);
-        rightShooterWheel.setInverted(true);
         /* set the peak and nominal outputs, 12V means full */
         rightShooterWheel.configNominalOutputVoltage(+0.0f, -0.0f);
         rightShooterWheel.configPeakOutputVoltage(+12.0f, 0.0f);
@@ -94,13 +99,13 @@ public class Robot extends IterativeRobot {
         leftShooterWheel.setI(0.000165); 
         leftShooterWheel.setD(1.75);
         
-    	server = CameraServer.getInstance();
+    	intakeMechanism.raiseIntake();
+
+    	/*server = CameraServer.getInstance();
         server.setQuality(50);
         //the camera name (ex "cam0") can be found through the roborio web interface
-        server.startAutomaticCapture("cam0");
+        server.startAutomaticCapture("cam0");*/
     	
-    	//camThread = new Thread(driveCamera);
-    	//camThread.start();
     }
     
 	/**
@@ -115,15 +120,16 @@ public class Robot extends IterativeRobot {
     public void autonomousInit() {
     	driveGyro.reset();
     	autoTimer.reset();
+    	autoTimer.start();
     	intakeMechanism.raiseIntake();
     }
 
 
     public void autonomousPeriodic() {
-    	double kp = 0.03;
+    	double kp = 0.05;
     	if(autoTimer.get() < 2)
     	{
-    		driveTrain.Halo_Drive(-0.67, -kp*driveGyro.getAngle());
+    		driveTrain.Halo_Drive(-0.80, -kp*driveGyro.getAngle());
     	}
     	else {
     		driveTrain.Halo_Drive(0.0, 0.0);
@@ -131,7 +137,8 @@ public class Robot extends IterativeRobot {
     }
 
     public void teleopInit() {
-    	intakeMechanism.lowerIntake();
+    	intakeMechanism.raiseIntake();
+    	//driveCamera.start();
     }
     /**
      * This function is called periodically during operator control
@@ -142,7 +149,10 @@ public class Robot extends IterativeRobot {
         shootingSpeed = false;
         //Raise and lower the intake mechanism.
         if(gunnerStick.getRawButton(5)) {
-        	intakeMechanism.raiseIntake();
+        	if(shooterMechanism.isShooterUp() == false)
+        	{
+            	intakeMechanism.raiseIntake();
+        	}
         }
         else {
         	if(gunnerStick.getRawAxis(2) >= 0.5) {
@@ -152,41 +162,75 @@ public class Robot extends IterativeRobot {
         
         //Raise and lower the shooter mechanism.
         if(gunnerStick.getRawButton(6)) {
-        	shooterPosition.set(DoubleSolenoid.Value.kForward);
+        	if(intakeMechanism.isIntakeUp() == false)
+        	{
+        		shooterMechanism.raiseShooter();
+        	}
         }
         else {
         	if(gunnerStick.getRawAxis(3) >= 0.5) {
-            	shooterPosition.set(DoubleSolenoid.Value.kReverse);
+        		shooterMechanism.lowerShooter();
         	}
         }
 
-        
+                
         //Press forward on the POV to fire the shooter
         if(gunnerStick.getPOV() == 0)
         {
         	holdingMotorPower.addPriority(0.50, 3);
-        	firing = true;
+        	wasFiring = true;
         }
         else {
         	holdingMotorPower.addPriority(0.0, 0);
-        	if(firing == true)
+        	if(wasFiring == true)
         	{
         		this.stopShooter();
-        		firing = false;
+        		wasFiring = false;
         	}
         }
 
         
-    	//Allow the intake mechanism to run if the shooter is not active.
+    	//Allow the intake mechanism to run if the holding switch is not pressed.
         if(gunnerStick.getPOV() == 180 && holdingSwitch.get() == true){
           intakeMechanism.runIntake();
-          shooterMotorPower.addPriority(-1.0, 2);
+          shooterMotorPower.addPriority(-0.68, 2);
           holdingMotorPower.addPriority(-0.70, 2);
         }
         else {
-        	intakeMechanism.stopIntake();
-        	shooterMotorPower.addPriority(0.00, 0);
-        	holdingMotorPower.addPriority(0.0, 0);
+        	if(Math.abs(gunnerStick.getRawAxis(1)) > 0.1)
+        	{
+        		//Manual joystick control of the intake and shooter is only allowed if the ball is being shot out
+        		//or if the boulder has not yet reached the switch.
+        		
+        		/*boolean canPower = false;
+        		if(-gunnerStick.getRawAxis(1) > 0)
+        		{
+        			canPower = true;
+        		}
+        		else {
+        			if(holdingSwitch.get() == false)
+        			{
+        				canPower = true;
+        			}
+        		}
+        		
+        		if(canPower)
+        		{
+        			 intakeMechanism.runIntake(gunnerStick.getRawAxis(1));
+                     shooterMotorPower.addPriority(-gunnerStick.getRawAxis(1), 1);
+                     holdingMotorPower.addPriority(-gunnerStick.getRawAxis(1), 1);
+        		}*/
+            	intakeMechanism.stopIntake();
+            	shooterMotorPower.addPriority(0.00, 0);
+            	holdingMotorPower.addPriority(0.0, 0);
+        	}
+        	else {
+            	intakeMechanism.stopIntake();
+            	shooterMotorPower.addPriority(0.00, 0);
+            	holdingMotorPower.addPriority(0.0, 0);
+        	}
+
+
         }
         
         
@@ -216,21 +260,17 @@ public class Robot extends IterativeRobot {
             	shooterMotorPower.addPriority(1.0, 3);
         	}
         	else {
-            	shooterMotorPower.addPriority(0.75, 3);
+            	shooterMotorPower.addPriority(0.50, 3);
         	}
-        	
-        	if(startingRev == true)
-        	{
-            	revUpTimer.start();
-        	}
-        	
-        	startingRev = false;
-        	
+
+            revUpTimer.start();
+        	        	
         	if(revUpTimer.get() > 5.5)
         	{
         		shootingSpeed  = true;
         	}
         	else {
+        		shootingSpeed = false;
         	}
         	
         }
@@ -246,7 +286,8 @@ public class Robot extends IterativeRobot {
         shooterMechanism.setShooterPower(shooterMotorPower.getHighestPriorityValue());
         shooterMotorPower.resetPrioritizer();
         
-		SmartDashboard.putBoolean("Firing Speed", shootingSpeed);
+		SmartDashboard.putBoolean(" Firing Speed", shootingSpeed);
+		SmartDashboard.putBoolean(" Ball Loaded", this.isBallLoaded());
     }
     
 	
@@ -257,9 +298,13 @@ public class Robot extends IterativeRobot {
     
     }
     
+    public void diabledInit() {
+    	//driveCamera.terminate();
+    }
+    
     public boolean isBallLoaded()
     {
-    	return holdingSwitch.get();
+    	return !holdingSwitch.get();
     }
     
     public void stopShooter()
