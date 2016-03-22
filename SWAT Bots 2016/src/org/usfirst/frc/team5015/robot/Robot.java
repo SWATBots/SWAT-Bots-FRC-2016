@@ -23,6 +23,8 @@ import edu.wpi.first.wpilibj.VictorSP;
  * directory.
  */
 public class Robot extends IterativeRobot {
+	
+	SendableChooser autoSelector;
 
 	Joystick driveStick = new Joystick(0);
 	Joystick gunnerStick = new Joystick(1);
@@ -50,14 +52,16 @@ public class Robot extends IterativeRobot {
 	boolean startingRev = true, highGoalSpeed = false, lowGoalSpeed = false;
 	boolean shootingSpeed = false, wasFiring = true;
 	Timer revUpTimer = new Timer();
-	
-	//CameraServer server;
-	
+		
 	Prioritizer holdingMotorPower = new Prioritizer();
 	Prioritizer shooterMotorPower = new Prioritizer();
 	
-	//Camera driveCamera = new Camera();
-	
+	DriveStraightAuto UnevenTerrain = new DriveStraightAuto("Straight over Uneven Terrain", 0.05, 3, -0.67);
+	DriveStraightAuto Moat = new DriveStraightAuto("Straight over Moat", 0.05, 3, -0.80);
+	DriveStraightAuto Rampart = new DriveStraightAuto("Straight over Rampart", 0.05, 2, -0.80);
+	AutoMode selectedAuto;
+		
+	double rpmTarget = 0;
     /**
      * This function is run when the robot is first started up and should be
      * used for any initialization code.
@@ -74,39 +78,55 @@ public class Robot extends IterativeRobot {
     	
     	intakeMechanism.lowerIntake();
     	
-    	airCompressor.setClosedLoopControl(true);;
+    	airCompressor.setClosedLoopControl(true);
     	
         rightShooterWheel.setFeedbackDevice(FeedbackDevice.CtreMagEncoder_Relative);
         rightShooterWheel.enableBrakeMode(false);
         /* set the peak and nominal outputs, 12V means full */
         rightShooterWheel.configNominalOutputVoltage(+0.0f, -0.0f);
-        rightShooterWheel.configPeakOutputVoltage(+12.0f, 0.0f);
+        
+        
+        rightShooterWheel.configPeakOutputVoltage(+0.0f, -12.0f);
+        
+        
         /* set closed loop gains in slot0 */
         rightShooterWheel.setProfile(0);
         rightShooterWheel.setF(0.024040671);
-        rightShooterWheel.setP(0.2063);
+        rightShooterWheel.setP(1.0);
+        rightShooterWheel.setI(0.0); 
+        rightShooterWheel.setD(0.0);
+        /*rightShooterWheel.setP(0.2063);
         rightShooterWheel.setI(0.000165); 
-        rightShooterWheel.setD(1.75);
+        rightShooterWheel.setD(1.75);*/
         
         leftShooterWheel.setFeedbackDevice(FeedbackDevice.CtreMagEncoder_Relative);
+        leftShooterWheel.reverseSensor(true);
         /* set the peak and nominal outputs, 12V means full */
         leftShooterWheel.configNominalOutputVoltage(+0.0f, -0.0f);
-        leftShooterWheel.configPeakOutputVoltage(+12.0f, -12.0f);
+        
+        
+        leftShooterWheel.configPeakOutputVoltage(+0.0f, -12.0f);
+        
+        
         /* set closed loop gains in slot0 */
         leftShooterWheel.setProfile(0);
         leftShooterWheel.setF(0.024040671);
-        leftShooterWheel.setP(0.2063);
-        leftShooterWheel.setI(0.000165); 
-        leftShooterWheel.setD(1.75);
+        leftShooterWheel.setP(1.0);
+        leftShooterWheel.setI(0.0); 
+        leftShooterWheel.setD(0.0);
+        //leftShooterWheel.setP(0.2063);
+        //leftShooterWheel.setI(0.000165); 
+        //leftShooterWheel.setD(1.75);
         
     	intakeMechanism.raiseIntake();
 
-    	/*server = CameraServer.getInstance();
-        server.setQuality(50);
-        //the camera name (ex "cam0") can be found through the roborio web interface
-        server.startAutomaticCapture("cam0");*/
-    	
+    	autoSelector = new SendableChooser();
+    	autoSelector.addDefault(Moat.getName(), Moat);
+    	autoSelector.addObject(Rampart.getName(), Rampart);
+    	autoSelector.addDefault(UnevenTerrain.getName(), UnevenTerrain);
+    	SmartDashboard.putData("Auto Selector", autoSelector);
     }
+
     
 	/**
 	 * This autonomous (along with the chooser code above) shows how to select between different autonomous modes
@@ -118,27 +138,18 @@ public class Robot extends IterativeRobot {
 	 * If using the SendableChooser make sure to add them to the chooser code above as well.
 	 */
     public void autonomousInit() {
-    	driveGyro.reset();
-    	autoTimer.reset();
-    	autoTimer.start();
     	intakeMechanism.raiseIntake();
+    	selectedAuto = (AutoMode) autoSelector.getSelected();
+    	selectedAuto.initializeAuto(driveTrain, shooterMechanism, intakeMechanism, autoTimer, driveGyro);
     }
 
 
     public void autonomousPeriodic() {
-    	double kp = 0.05;
-    	if(autoTimer.get() < 2)
-    	{
-    		driveTrain.Halo_Drive(-0.80, -kp*driveGyro.getAngle());
-    	}
-    	else {
-    		driveTrain.Halo_Drive(0.0, 0.0);
-    	}
+    	selectedAuto.runAuto();
     }
 
     public void teleopInit() {
     	intakeMechanism.raiseIntake();
-    	//driveCamera.start();
     }
     /**
      * This function is called periodically during operator control
@@ -146,7 +157,7 @@ public class Robot extends IterativeRobot {
 	public void teleopPeriodic() {
         driveTrain.Halo_Drive(driveStick.getRawAxis(1), driveStick.getRawAxis(2));
         
-        shootingSpeed = false;
+        rpmTarget = 0;
         //Raise and lower the intake mechanism.
         if(gunnerStick.getRawButton(5)) {
         	if(shooterMechanism.isShooterUp() == false)
@@ -202,16 +213,21 @@ public class Robot extends IterativeRobot {
         		//Manual joystick control of the intake and shooter is only allowed if the ball is being shot out
         		//or if the boulder has not yet reached the switch.
         		
-        		/*boolean canPower = false;
+        		boolean canPower = false;
         		if(-gunnerStick.getRawAxis(1) > 0)
         		{
         			canPower = true;
         		}
         		else {
-        			if(holdingSwitch.get() == false)
+        			if(this.isBallLoaded() == false)
         			{
         				canPower = true;
         			}
+        		}
+        		
+        		if(gunnerStick.getRawButton(9) == false)
+        		{
+        			canPower = false;
         		}
         		
         		if(canPower)
@@ -219,10 +235,13 @@ public class Robot extends IterativeRobot {
         			 intakeMechanism.runIntake(gunnerStick.getRawAxis(1));
                      shooterMotorPower.addPriority(-gunnerStick.getRawAxis(1), 1);
                      holdingMotorPower.addPriority(-gunnerStick.getRawAxis(1), 1);
-        		}*/
-            	intakeMechanism.stopIntake();
-            	shooterMotorPower.addPriority(0.00, 0);
-            	holdingMotorPower.addPriority(0.0, 0);
+        		}
+        		else{
+                	intakeMechanism.stopIntake();
+                	shooterMotorPower.addPriority(0.00, 0);
+                	holdingMotorPower.addPriority(0.0, 0);	
+        		}
+
         	}
         	else {
             	intakeMechanism.stopIntake();
@@ -257,10 +276,12 @@ public class Robot extends IterativeRobot {
         	
         	if(highGoalSpeed)
         	{
-            	shooterMotorPower.addPriority(1.0, 3);
+            	shooterMotorPower.addPriority(1.0, 3); //*-6233 to change to RPM
+            	rpmTarget = -4400.0;
         	}
         	else {
             	shooterMotorPower.addPriority(0.50, 3);
+            	rpmTarget = -2655;
         	}
 
             revUpTimer.start();
@@ -268,10 +289,16 @@ public class Robot extends IterativeRobot {
         	if(revUpTimer.get() > 5.5)
         	{
         		shootingSpeed  = true;
+        		SmartDashboard.putBoolean(" Firing Speed", true);
+
         	}
         	else {
         		shootingSpeed = false;
+        		SmartDashboard.putBoolean(" Firing Speed", false);
+
         	}
+        	
+        	
         	
         }
         else {
@@ -284,22 +311,28 @@ public class Robot extends IterativeRobot {
         holdingMotorPower.resetPrioritizer();
         
         shooterMechanism.setShooterPower(shooterMotorPower.getHighestPriorityValue());
+        
+        
         shooterMotorPower.resetPrioritizer();
         
-		SmartDashboard.putBoolean(" Firing Speed", shootingSpeed);
+        /*if(rpmTarget != 0.0 && shooterMechanism.absSpeedAbove(rpmTarget))
+        {
+        	shootingSpeed = true;
+        }
+        else {
+        	shootingSpeed0 0= false;
+        }*/
+		//SmartDashboard.putBoolean(" Firing Speed", shootingSpeed);
 		SmartDashboard.putBoolean(" Ball Loaded", this.isBallLoaded());
     }
     
 	
-    /**
-     * This function is called periodically during test mode
-     */
-    public void testPeriodic() {
-    
-    }
-    
-    public void diabledInit() {
-    	//driveCamera.terminate();
+    @Override
+    public void disabledPeriodic() {
+    	
+    	SmartDashboard.putData("Auto Selector", autoSelector);
+    	selectedAuto = (AutoMode) autoSelector.getSelected();
+    	SmartDashboard.putString("Selected Auto Mode", selectedAuto.getName());
     }
     
     public boolean isBallLoaded()
