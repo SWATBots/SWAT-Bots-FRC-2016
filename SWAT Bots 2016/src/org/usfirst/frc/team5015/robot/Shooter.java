@@ -86,13 +86,13 @@ public class Shooter {
 	public void raiseShooter()
 	{
 		shooterUp = true;
-		shooterPosition.set(DoubleSolenoid.Value.kForward);
+		shooterPosition.set(DoubleSolenoid.Value.kReverse);
 	}
 	
 	public void lowerShooter()
 	{
 		shooterUp = false;
-    	shooterPosition.set(DoubleSolenoid.Value.kReverse);
+    	shooterPosition.set(DoubleSolenoid.Value.kForward);
 	}
 	
 	public boolean isShooterUp()

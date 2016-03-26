@@ -11,6 +11,11 @@ public class AutoMode {
 	Timer autoTimer;
 	AnalogGyro driveGyro;
 	String name;
+
+	public void setName(String autoName)
+	{
+		name = autoName;
+	}
 	
 	public void initializeAuto(Drive driveTrain, Shooter shooter, Intake intake, Timer autonomousTimer, AnalogGyro gyro)
 	{
@@ -25,7 +30,7 @@ public class AutoMode {
     	autoTimer.start();
 	}
 	
-	public void runAuto()
+	public void runAuto(double finalTurnAngle)
 	{
 		
 	}

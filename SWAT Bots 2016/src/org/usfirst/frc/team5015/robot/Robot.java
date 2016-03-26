@@ -9,7 +9,6 @@ import edu.wpi.first.wpilibj.Talon;
 import edu.wpi.first.wpilibj.CANTalon.FeedbackDevice;
 import edu.wpi.first.wpilibj.Compressor;
 import edu.wpi.first.wpilibj.CANTalon;
-import edu.wpi.first.wpilibj.CameraServer;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.AnalogGyro;
 import edu.wpi.first.wpilibj.smartdashboard.*;
@@ -31,8 +30,8 @@ public class Robot extends IterativeRobot {
 	Compressor airCompressor = new Compressor(0);
 	Talon leftDrive = new Talon(1);
 	Talon rightDrive = new Talon(0);
-	Drive driveTrain = new Drive(leftDrive, rightDrive);
 	AnalogGyro driveGyro = new AnalogGyro(1);
+	Drive driveTrain = new Drive(leftDrive, rightDrive, driveGyro);
 	Timer autoTimer = new Timer();
 	
 	DoubleSolenoid intakePosition = new DoubleSolenoid(4, 5);
@@ -59,6 +58,8 @@ public class Robot extends IterativeRobot {
 	DriveStraightAuto UnevenTerrain = new DriveStraightAuto("Straight over Uneven Terrain", 0.05, 3, -0.67);
 	DriveStraightAuto Moat = new DriveStraightAuto("Straight over Moat", 0.05, 3, -0.80);
 	DriveStraightAuto Rampart = new DriveStraightAuto("Straight over Rampart", 0.05, 2, -0.80);
+	AutoMode Nothing = new AutoMode();
+	TwoPartDriveAuto Rockwall = new TwoPartDriveAuto("Straight over the Rockwall", 0.05, 0.4, 2.0, -0.4, -0.9);
 	AutoMode selectedAuto;
 		
 	double rpmTarget = 0;
@@ -121,9 +122,12 @@ public class Robot extends IterativeRobot {
     	intakeMechanism.raiseIntake();
 
     	autoSelector = new SendableChooser();
+    	Nothing.setName("Do nothing");
+    	autoSelector.addObject(Nothing.getName(), Nothing);
     	autoSelector.addDefault(Moat.getName(), Moat);
     	autoSelector.addObject(Rampart.getName(), Rampart);
     	autoSelector.addDefault(UnevenTerrain.getName(), UnevenTerrain);
+    	autoSelector.addObject(Rockwall.getName(), Rockwall);
     	SmartDashboard.putData("Auto Selector", autoSelector);
     }
 
@@ -145,7 +149,7 @@ public class Robot extends IterativeRobot {
 
 
     public void autonomousPeriodic() {
-    	selectedAuto.runAuto();
+    	selectedAuto.runAuto(180.0);
     }
 
     public void teleopInit() {
