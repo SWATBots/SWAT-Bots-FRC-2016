@@ -7,6 +7,7 @@ public class Drive {
 	Talon leftMotor, rightMotor;
 	RobotDrive driveTrain;
 	AnalogGyro driveGyro;
+	private double maxSpeed = 1.0;
 	
 	public Drive(Talon Left_Motor, Talon Right_Motor, AnalogGyro Drive_Gyro)
 	{
@@ -18,12 +19,17 @@ public class Drive {
 	
 	public void Halo_Drive(double moveValue, double rotateValue)
 	{
-		driveTrain.arcadeDrive(moveValue, rotateValue);
+		driveTrain.arcadeDrive(moveValue * maxSpeed, rotateValue * maxSpeed);
+	}
+	
+	public void setMaxSpeed(double maximumSpeed)
+	{
+		maxSpeed = maximumSpeed;
 	}
 	
 	public boolean gyroTurn(double targetAngle)
 	{
-		double kp = 0.05;
+		double kp = -0.05;
 		double error = driveGyro.getAngle() - targetAngle;
 		boolean targetReached = false;
 		

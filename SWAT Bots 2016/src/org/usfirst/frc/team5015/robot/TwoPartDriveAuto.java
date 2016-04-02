@@ -34,7 +34,7 @@ public class TwoPartDriveAuto extends AutoMode {
     			{
     				super.driveSystem.driveGyro.reset();
     			}
-    			super.driveSystem.gyroTurn(finalTurnAngle);
+    			//super.driveSystem.gyroTurn(finalTurnAngle);
     			lastStep = 3;
     		}
     	}

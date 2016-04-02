@@ -26,7 +26,7 @@ public class DriveStraightAuto extends AutoMode{
     		{
     			super.driveSystem.driveGyro.reset();
     		}
-    		super.driveSystem.gyroTurn(finalTurnAngle);
+    		//super.driveSystem.gyroTurn(finalTurnAngle);
     		lastStep = 2;
     	}
 	}

@@ -30,7 +30,8 @@ public class Robot extends IterativeRobot {
 	Compressor airCompressor = new Compressor(0);
 	Talon leftDrive = new Talon(1);
 	Talon rightDrive = new Talon(0);
-	AnalogGyro driveGyro = new AnalogGyro(1);
+	AnalogGyro driveGyro = new AnalogGyro(0);
+	AnalogGyro tiltGyro = new AnalogGyro(1);
 	Drive driveTrain = new Drive(leftDrive, rightDrive, driveGyro);
 	Timer autoTimer = new Timer();
 	
@@ -59,10 +60,14 @@ public class Robot extends IterativeRobot {
 	DriveStraightAuto Moat = new DriveStraightAuto("Straight over Moat", 0.05, 3, -0.80);
 	DriveStraightAuto Rampart = new DriveStraightAuto("Straight over Rampart", 0.05, 2, -0.80);
 	AutoMode Nothing = new AutoMode();
-	TwoPartDriveAuto Rockwall = new TwoPartDriveAuto("Straight over the Rockwall", 0.05, 0.4, 2.0, -0.4, -0.9);
+	TwoPartDriveAuto Rockwall = new TwoPartDriveAuto("Straight over the Rockwall", 0.05, 0.85, 3.0, -0.55, -1.0);
+	TiltAuto testTiltAuto = new TiltAuto(tiltGyro);
+	DriveStraightAuto reachDefense = new DriveStraightAuto("Reach the Defense", 0.05, 2, -0.50);
 	AutoMode selectedAuto;
+	
 		
 	double rpmTarget = 0;
+	boolean rpmShootingSpeed = false;
     /**
      * This function is run when the robot is first started up and should be
      * used for any initialization code.
@@ -73,6 +78,9 @@ public class Robot extends IterativeRobot {
     	intakeMechanism = new Intake(intakePosition, intakeMotor, leftOuterIntake, rightOuterIntake);
     	driveGyro.calibrate();
     	driveGyro.reset();
+    	
+    	tiltGyro.calibrate();
+    	tiltGyro.reset();
     	
     	leftDrive.setInverted(true);
     	rightDrive.setInverted(true);
@@ -123,11 +131,13 @@ public class Robot extends IterativeRobot {
 
     	autoSelector = new SendableChooser();
     	Nothing.setName("Do nothing");
+    	testTiltAuto.setName("Test Tilt Auto EXPERIMENTAL DO NOT USE!!!");
     	autoSelector.addObject(Nothing.getName(), Nothing);
     	autoSelector.addDefault(Moat.getName(), Moat);
     	autoSelector.addObject(Rampart.getName(), Rampart);
     	autoSelector.addDefault(UnevenTerrain.getName(), UnevenTerrain);
     	autoSelector.addObject(Rockwall.getName(), Rockwall);
+    	autoSelector.addObject(testTiltAuto.getName(), testTiltAuto);
     	SmartDashboard.putData("Auto Selector", autoSelector);
     }
 
@@ -149,7 +159,7 @@ public class Robot extends IterativeRobot {
 
 
     public void autonomousPeriodic() {
-    	selectedAuto.runAuto(180.0);
+    	selectedAuto.runAuto(0.0);
     }
 
     public void teleopInit() {
@@ -159,6 +169,17 @@ public class Robot extends IterativeRobot {
      * This function is called periodically during operator control
      */
 	public void teleopPeriodic() {
+		
+		rpmShootingSpeed = false;
+		
+		if(driveStick.getRawButton(5) || driveStick.getRawButton(7) || driveStick.getRawButton(8))
+		{
+			driveTrain.setMaxSpeed(0.75);
+		}
+		else {
+			driveTrain.setMaxSpeed(1.0);
+		}
+		
         driveTrain.Halo_Drive(driveStick.getRawAxis(1), driveStick.getRawAxis(2));
         
         rpmTarget = 0;
@@ -199,7 +220,7 @@ public class Robot extends IterativeRobot {
         	holdingMotorPower.addPriority(0.0, 0);
         	if(wasFiring == true)
         	{
-        		this.stopShooter();
+        		this.stopLowSpeed();
         		wasFiring = false;
         	}
         }
@@ -287,27 +308,29 @@ public class Robot extends IterativeRobot {
             	shooterMotorPower.addPriority(0.50, 3);
             	rpmTarget = -2655;
         	}
-
-            revUpTimer.start();
         	        	
-        	if(revUpTimer.get() > 5.5)
+        	if(revUpTimer.get() >= 4.5)
         	{
         		shootingSpeed  = true;
-        		SmartDashboard.putBoolean(" Firing Speed", true);
 
         	}
         	else {
         		shootingSpeed = false;
-        		SmartDashboard.putBoolean(" Firing Speed", false);
-
         	}
         	
+        	if(shooterMechanism.absSpeedAbove(rpmTarget))
+            {
+            	rpmShootingSpeed = true;
+            }
+            else {
+            	rpmShootingSpeed = false;
+            }
         	
-        	
+        	 	
         }
         else {
         	startingRev = true;
-        	revUpTimer.stop();
+        	revUpTimer.start();
         	revUpTimer.reset();
         }
         
@@ -319,15 +342,12 @@ public class Robot extends IterativeRobot {
         
         shooterMotorPower.resetPrioritizer();
         
-        /*if(rpmTarget != 0.0 && shooterMechanism.absSpeedAbove(rpmTarget))
-        {
-        	shootingSpeed = true;
-        }
-        else {
-        	shootingSpeed0 0= false;
-        }*/
-		//SmartDashboard.putBoolean(" Firing Speed", shootingSpeed);
+        //SmartDashboard.putBoolean(" Firing Speed", shootingSpeed);
 		SmartDashboard.putBoolean(" Ball Loaded", this.isBallLoaded());
+		SmartDashboard.putBoolean(" Firing Speed", shootingSpeed);
+		SmartDashboard.putBoolean(" RPM Firing Speed", rpmShootingSpeed);
+		SmartDashboard.putNumber("Tilt Angle", tiltGyro.getAngle());
+		SmartDashboard.putNumber("Turn Angle", driveGyro.getAngle());
     }
     
 	
@@ -347,6 +367,11 @@ public class Robot extends IterativeRobot {
     public void stopShooter()
     {
     	highGoalSpeed = false;
+    	lowGoalSpeed = false;
+    }
+    
+    public void stopLowSpeed()
+    {
     	lowGoalSpeed = false;
     }
     
