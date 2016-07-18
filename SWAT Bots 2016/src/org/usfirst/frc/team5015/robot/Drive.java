@@ -17,7 +17,7 @@ public class Drive {
 		driveGyro = Drive_Gyro;
 	}
 	
-	public void Halo_Drive(double moveValue, double rotateValue)
+	public void controlDrive(double moveValue, double rotateValue)
 	{
 		driveTrain.arcadeDrive(moveValue * maxSpeed, rotateValue * maxSpeed);
 	}
@@ -35,11 +35,11 @@ public class Drive {
 		
 		if(Math.abs(error) > 5.0)
 		{
-			this.Halo_Drive(0.0, kp * error);
+			this.controlDrive(0.0, kp * error);
 			targetReached = false;
 		}
 		else {
-			this.Halo_Drive(0.0, 0.0);
+			this.controlDrive(0.0, 0.0);
 			targetReached = true;
 		}
 		

@@ -91,46 +91,36 @@ public class Robot extends IterativeRobot {
     	
     	airCompressor.setClosedLoopControl(true);
     	
+    	//Configure the settings for the Talon SRXs used on the shooter system.
+    	
         rightShooterWheel.setFeedbackDevice(FeedbackDevice.CtreMagEncoder_Relative);
         rightShooterWheel.enableBrakeMode(false);
         /* set the peak and nominal outputs, 12V means full */
         rightShooterWheel.configNominalOutputVoltage(+0.0f, -0.0f);
-        
-        
         rightShooterWheel.configPeakOutputVoltage(+0.0f, -12.0f);
-        
-        
         /* set closed loop gains in slot0 */
         rightShooterWheel.setProfile(0);
         rightShooterWheel.setF(0.024040671);
         rightShooterWheel.setP(1.0);
         rightShooterWheel.setI(0.0); 
         rightShooterWheel.setD(0.0);
-        /*rightShooterWheel.setP(0.2063);
-        rightShooterWheel.setI(0.000165); 
-        rightShooterWheel.setD(1.75);*/
         
         leftShooterWheel.setFeedbackDevice(FeedbackDevice.CtreMagEncoder_Relative);
         leftShooterWheel.reverseSensor(true);
         /* set the peak and nominal outputs, 12V means full */
         leftShooterWheel.configNominalOutputVoltage(+0.0f, -0.0f);
-        
-        
         leftShooterWheel.configPeakOutputVoltage(+0.0f, -12.0f);
-        
-        
         /* set closed loop gains in slot0 */
         leftShooterWheel.setProfile(0);
         leftShooterWheel.setF(0.024040671);
         leftShooterWheel.setP(1.0);
         leftShooterWheel.setI(0.0); 
         leftShooterWheel.setD(0.0);
-        //leftShooterWheel.setP(0.2063);
-        //leftShooterWheel.setI(0.000165); 
-        //leftShooterWheel.setD(1.75);
+
         
     	intakeMechanism.raiseIntake();
 
+    	//Initialize the sendable chooser for selecting the auto mode.
     	autoSelector = new SendableChooser();
     	Nothing.setName("Do nothing");
     	testTiltAuto.setName("Test Tilt Auto EXPERIMENTAL DO NOT USE!!!");
@@ -146,17 +136,11 @@ public class Robot extends IterativeRobot {
     }
 
     
-	/**
-	 * This autonomous (along with the chooser code above) shows how to select between different autonomous modes
-	 * using the dashboard. The sendable chooser code works with the Java SmartDashboard. If you prefer the LabVIEW
-	 * Dashboard, remove all of the chooser code and uncomment the getString line to get the auto name from the text box
-	 * below the Gyro
-	 *
-	 * You can add additional auto modes by adding additional comparisons to the switch structure below with additional strings.
-	 * If using the SendableChooser make sure to add them to the chooser code above as well.
-	 */
+
     public void autonomousInit() {
+    	//Initialize the intake position and then get the selected auto mode.
     	intakeMechanism.raiseIntake();
+    	
     	selectedAuto = (AutoMode) autoSelector.getSelected();
     	selectedAuto.initializeAuto(driveTrain, shooterMechanism, intakeMechanism, autoTimer, driveGyro);
     }
@@ -184,7 +168,7 @@ public class Robot extends IterativeRobot {
 			driveTrain.setMaxSpeed(1.0);
 		}
 		
-        driveTrain.Halo_Drive(driveStick.getRawAxis(1), driveStick.getRawAxis(2));
+        driveTrain.controlDrive(driveStick.getRawAxis(1), driveStick.getRawAxis(2));
         
         rpmTarget = 0;
         //Raise and lower the intake mechanism.
@@ -333,6 +317,7 @@ public class Robot extends IterativeRobot {
         	 	
         }
         else {
+        	
         	startingRev = true;
         	revUpTimer.start();
         	revUpTimer.reset();

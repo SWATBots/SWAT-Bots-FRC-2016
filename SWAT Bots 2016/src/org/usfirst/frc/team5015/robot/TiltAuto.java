@@ -21,7 +21,7 @@ public class TiltAuto extends AutoMode{
 	{
 		switch (currentStep) {
 		case 1:
-    		super.driveSystem.Halo_Drive(-0.67, -0.05*driveGyro.getAngle());
+    		super.driveSystem.controlDrive(-0.67, -0.05*driveGyro.getAngle());
     		if(this.getAngle() > 10.0)
     		{
     			currentStep++;
@@ -29,7 +29,7 @@ public class TiltAuto extends AutoMode{
 			break;
 			
 		case 2:
-    		super.driveSystem.Halo_Drive(-0.67, -0.05*driveGyro.getAngle());
+    		super.driveSystem.controlDrive(-0.67, -0.05*driveGyro.getAngle());
     		if(this.getAngle() < -10.0)
     		{
     			currentStep++;
@@ -40,7 +40,7 @@ public class TiltAuto extends AutoMode{
 			
 		case 3:
     		//super.driveSystem.Halo_Drive(-0.67, -0.05*driveGyro.getAngle());
-			super.driveSystem.Halo_Drive(0.0, 0.0);
+			super.driveSystem.controlDrive(0.0, 0.0);
     		if(super.autoTimer.get() > 1.0)
     		{
     			currentStep++;
@@ -48,7 +48,7 @@ public class TiltAuto extends AutoMode{
     		break;
     		
     	default:
-    		super.driveSystem.Halo_Drive(0.0, 0.0);
+    		super.driveSystem.controlDrive(0.0, 0.0);
     		super.shooterSystem.setShooterPower(0.0);
     		break;
 		}

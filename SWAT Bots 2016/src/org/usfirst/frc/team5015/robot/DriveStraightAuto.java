@@ -24,7 +24,7 @@ public class DriveStraightAuto extends AutoMode{
     	if(autoTimer.get() < driveTime)
     	{
     		lastStep = 1;
-    		super.driveSystem.Halo_Drive(motorPwr, -kp*driveGyro.getAngle());
+    		super.driveSystem.controlDrive(motorPwr, -kp*driveGyro.getAngle());
     	}
     	else {
     		if(lastStep == 1)

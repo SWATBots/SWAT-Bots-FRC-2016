@@ -14,6 +14,10 @@ Image frame;
 boolean enabled = true;
 private Thread camThread;
 
+/*
+ * This class is used to create a thread used to activate a camera feed to the driver station from
+ * a USB camera on the robot.
+ */
   public Camera()
   {
 	  frame = NIVision.imaqCreateImage(NIVision.ImageType.IMAGE_RGB, 0);
