@@ -56,14 +56,16 @@ public class Robot extends IterativeRobot {
 	Prioritizer holdingMotorPower = new Prioritizer();
 	Prioritizer shooterMotorPower = new Prioritizer();
 	
-	DriveStraightAuto UnevenTerrain = new DriveStraightAuto("Straight over Uneven Terrain", 0.05, 3, -0.67);
-	DriveStraightAuto Moat = new DriveStraightAuto("Straight over Moat", 0.05, 3, -0.80);
-	DriveStraightAuto Rampart = new DriveStraightAuto("Straight over Rampart", 0.05, 2, -0.80);
+	DriveStraightAuto UnevenTerrain = new DriveStraightAuto("Straight over Uneven Terrain", 0.05, 3, -0.80);
+	DriveStraightAuto Moat = new DriveStraightAuto("Straight over Moat", 0.05, 3, -1.0);
+	DriveStraightAuto Rampart = new DriveStraightAuto("Straight over Rampart", 0.05, 2, -1.0);
 	AutoMode Nothing = new AutoMode();
 	TwoPartDriveAuto Rockwall = new TwoPartDriveAuto("Straight over the Rockwall", 0.05, 0.85, 3.0, -0.55, -1.0);
 	TiltAuto testTiltAuto = new TiltAuto(tiltGyro);
 	DriveStraightAuto reachDefense = new DriveStraightAuto("Reach the Defense", 0.05, 2, -0.50);
 	AutoMode selectedAuto;
+	PorticullisAuto porticullis = new PorticullisAuto("Porticullis", 0.05);
+	
 	
 		
 	double rpmTarget = 0;
@@ -137,7 +139,9 @@ public class Robot extends IterativeRobot {
     	autoSelector.addObject(Rampart.getName(), Rampart);
     	autoSelector.addDefault(UnevenTerrain.getName(), UnevenTerrain);
     	autoSelector.addObject(Rockwall.getName(), Rockwall);
-    	autoSelector.addObject(testTiltAuto.getName(), testTiltAuto);
+    	//autoSelector.addObject(testTiltAuto.getName(), testTiltAuto);
+    	autoSelector.addObject(reachDefense.getName(),reachDefense);
+    	autoSelector.addObject(porticullis.getName(), porticullis);
     	SmartDashboard.putData("Auto Selector", autoSelector);
     }
 

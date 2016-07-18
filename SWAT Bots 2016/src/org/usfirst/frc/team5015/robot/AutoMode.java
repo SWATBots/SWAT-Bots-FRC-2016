@@ -4,7 +4,9 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.AnalogGyro;
 
 public class AutoMode {
-	
+	/**
+	 * An empty auto mode which can be used as the superclass of many other auto modes.
+	 */
 	Intake intakeSystem;
 	Shooter shooterSystem;
 	Drive driveSystem;

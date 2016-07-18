@@ -1,6 +1,10 @@
 package org.usfirst.frc.team5015.robot;
 
 public class TwoPartDriveAuto extends AutoMode {
+	/**
+	 * A more complex auto mode in which the robot drives forward at one speed for a certain time and
+	 * then changes to a different speed for another period of time.
+	 */
 	double kp, firstDriveTime, secondDriveTime, firstMotorPwr, secondMotorPwr;
 	int lastStep;
 	

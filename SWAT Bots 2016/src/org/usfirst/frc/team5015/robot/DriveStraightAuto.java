@@ -2,6 +2,11 @@ package org.usfirst.frc.team5015.robot;
 
 public class DriveStraightAuto extends AutoMode{
 	
+	/**
+	 * A simple auto mode which drives straight for a certain period of time using a
+	 * gyro sensor for angle correction.
+	 */
+	
 	double kp, driveTime, motorPwr;
 	int lastStep = 0;
 	

@@ -39,7 +39,8 @@ public class TiltAuto extends AutoMode{
 			break;
 			
 		case 3:
-    		super.driveSystem.Halo_Drive(-0.67, -0.05*driveGyro.getAngle());
+    		//super.driveSystem.Halo_Drive(-0.67, -0.05*driveGyro.getAngle());
+			super.driveSystem.Halo_Drive(0.0, 0.0);
     		if(super.autoTimer.get() > 1.0)
     		{
     			currentStep++;
